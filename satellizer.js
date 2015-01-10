@@ -359,7 +359,7 @@
       '$q',
       '$http',
       '$window',
-      'satellizer.popup',
+      'satellizer.popupCordova',
       'satellizer.utils',
       'satellizer.config',
       function($q, $http, $window, popup, utils, config) {
@@ -568,6 +568,89 @@
 
         return popup;
       }])
+    .factory('satellizer.popupCordova', [
+        '$q', 'satellizer.utils',
+        function($q, utils, supersonic){
+
+          var popupWindow = null;
+
+          var popup = {};
+
+          popup.popupWindow = popupWindow;
+
+          popup.open = function(url, options) {
+
+            var deferred = $q.defer();
+
+            var optionsString = popup.stringifyOptions(options || {});
+            popupWindow = window.open(url, '_blank', optionsString);
+
+            //popupWindow.addEventListener('loaderror', function(event) {
+            //  supersonic.logger.log('loaderror event:'+event.message);
+            //});
+
+            popupWindow.addEventListener('loadstart', function(event) {
+              var eventUrl = event.url;
+
+              //Cordova - always localhost as redirectURI
+              if (eventUrl.substr(0,17) === "http://localhost/"){
+
+                var qs = null;
+
+                //parsing the redirect link without window.location.search and window.location.hash
+                //the uri may contain '#' or '?' or both in any order
+                var splitted = eventUrl.split(/\?|#/); // ?, #, ? #, # ?
+                if(splitted.length < 3){ //# or ?, but not both
+                  var queryParams = splitted[1].replace(/\/$/, '');
+                  qs = utils.parseQueryString(queryParams);
+                } else { //both
+                  var rhq1 = splitted[1].replace(/\/$/, '');
+                  var rhq2 = splitted[2].replace(/\/$/, '');
+
+                  var phq1 = utils.parseQueryString(rhq1);
+                  qs = utils.parseQueryString(rhq2);
+
+                  angular.extend(qs, phq1);
+                }
+
+                if (qs.error) {
+                  deferred.reject({ error: qs.error });
+                } else {
+                  deferred.resolve(qs);
+                }
+
+                popupWindow.close();
+
+              }
+
+            });
+
+            return deferred.promise;
+
+          };
+
+          popup.prepareOptions = function(options) {
+            var width = options.width || 500;
+            var height = options.height || 500;
+            return angular.extend({
+              width: width,
+              height: height,
+              left: $window.screenX + (($window.outerWidth - width) / 2),
+              top: $window.screenY + (($window.outerHeight - height) / 2.5)
+            }, options);
+          };
+
+          popup.stringifyOptions = function(options) {
+            var parts = [];
+            angular.forEach(options, function(value, key) {
+              parts.push(key + '=' + value);
+            });
+            return parts.join(',');
+          };
+
+          return popup;
+
+        }])
     .service('satellizer.utils', function() {
       this.camelCase = function(name) {
         return name.replace(/([\:\-\_]+(.))/g, function(_, separator, letter, offset) {
