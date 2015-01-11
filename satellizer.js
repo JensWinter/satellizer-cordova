@@ -599,18 +599,10 @@
 
                 //parsing the redirect link without window.location.search and window.location.hash
                 //the uri may contain '#' or '?' or both in any order
-                var splitted = eventUrl.split(/\?|#/); // ?, #, ? #, # ?
-                if(splitted.length < 3){ //# or ?, but not both
-                  var queryParams = splitted[1].replace(/\/$/, '');
-                  qs = utils.parseQueryString(queryParams);
-                } else { //both
-                  var rhq1 = splitted[1].replace(/\/$/, '');
-                  var rhq2 = splitted[2].replace(/\/$/, '');
-
-                  var phq1 = utils.parseQueryString(rhq1);
-                  qs = utils.parseQueryString(rhq2);
-
-                  angular.extend(qs, phq1);
+                var splitted = eventUrl.split(/\?|#/);
+                qs = utils.parseQueryString(splitted[1].replace(/\/$/, ''));
+                if(splitted[2]){
+                  angular.extend(qs, utils.parseQueryString(splitted[2].replace(/\/$/, '')));
                 }
 
                 if (qs.error) {
